@@ -3,10 +3,14 @@ from json import loads
 import time
 from time import sleep
 
-def main(ip_address, port):
+def main(ip_address, port, partition_number):
+    topic = 'test'
     broker_address = ip_address + ":" + port
-    consumer = KafkaConsumer( 'test', bootstrap_servers=[broker_address], auto_offset_reset='earliest', enable_auto_commit=True, group_id='my-group', value_deserializer=lambda x: loads(x.decode('utf-8')), consumer_timeout_ms=1000 )
+
+    consumer = KafkaConsumer( topic, bootstrap_servers=[broker_address], auto_offset_reset='earliest', enable_auto_commit=True, group_id='my-group', value_deserializer=lambda x: loads(x.decode('utf-8')), consumer_timeout_ms=1000 )
     print('[begin] get consumer list')
+
+    consumer.assign([TopicPartition(topic,partition_number])
 
     before_time = time.time()
 
@@ -20,14 +24,6 @@ def main(ip_address, port):
             for message in consumer:
                 print("Topic: %s, Partition: %d, Offset: %d, Key: %s, Value: %s" % ( message.topic, message.partition, message.offset, message.key, message.value ))
 
-            """
-            message = consumer.poll()
-            if len(message) != 0 : sleep(1)
-            for topic_partition, records in message.items():
-                for record in records:
-                    parsed_record = ujson.loads(record.value)
-                    print(parsed_record)
-            """
 
 
             before_time = time.time()
@@ -41,10 +37,12 @@ def main(ip_address, port):
 if __name__ == "__main__":
     ip_address = ""
     port = ""
-
+    partition_number = -1
     with open("ip_config.txt", "r") as f:
         ip_address = f.readline()
     with open("port.txt", "r") as f:
         port = f.readline()
+    with open("partition_number.txt", "r") as f:
+        partition_number = f.readline()
 
-    main(ip_address,port)
+    main(ip_address,port,partition_number)
