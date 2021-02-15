@@ -1,16 +1,18 @@
 from kafka import KafkaConsumer
+from kafka.structs import TopicPartition
 from json import loads
 import time
 from time import sleep
+
 
 def main(ip_address, port, partition_number):
     topic = 'test'
     broker_address = ip_address + ":" + port
 
-    consumer = KafkaConsumer( topic, bootstrap_servers=[broker_address], auto_offset_reset='earliest', enable_auto_commit=True, group_id='my-group', value_deserializer=lambda x: loads(x.decode('utf-8')), consumer_timeout_ms=1000 )
+    consumer = KafkaConsumer( bootstrap_servers=[broker_address], auto_offset_reset='earliest', enable_auto_commit=True, group_id='my-group', value_deserializer=lambda x: loads(x.decode('utf-8')), consumer_timeout_ms=1000 )
     print('[begin] get consumer list')
 
-    consumer.assign([TopicPartition(topic,partition_number])
+    consumer.assign([TopicPartition(topic,0)])
 
     before_time = time.time()
 
@@ -43,6 +45,7 @@ if __name__ == "__main__":
     with open("port.txt", "r") as f:
         port = f.readline()
     with open("partition_number.txt", "r") as f:
-        partition_number = f.readline()
+        partition_number = int(f.readline())
+    print(ip_address, port, partition_number)
 
     main(ip_address,port,partition_number)
