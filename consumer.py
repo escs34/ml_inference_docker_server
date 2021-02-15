@@ -12,7 +12,7 @@ def main(ip_address, port, partition_number):
     consumer = KafkaConsumer( bootstrap_servers=[broker_address], auto_offset_reset='earliest', enable_auto_commit=True, group_id='my-group', value_deserializer=lambda x: loads(x.decode('utf-8')), consumer_timeout_ms=1000 )
     print('[begin] get consumer list')
 
-    consumer.assign([TopicPartition(topic,0)])
+    consumer.assign([TopicPartition(topic,partition_number)])
 
     before_time = time.time()
 
