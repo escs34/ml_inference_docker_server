@@ -7,4 +7,4 @@ curl -fsSL https://get.docker.com/ | sh
 
 sudo docker build -t tensor_docker ./ml_inference_docker_server/.
 
-sudo docker run -itd -p 8078:8078 tensor_docker
+sudo docker run -itd --name tensor -p 8078:8078 tensor_docker
