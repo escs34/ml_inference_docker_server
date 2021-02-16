@@ -1,16 +1,19 @@
 #producer
 
 from kafka import KafkaProducer
-from tensorflow.keras.datasets import cifar10
+from kafka import KafkaConsumer
+from kafka.structs import TopicPartition
 
 import tensorflow as tf
 import tensorflow.keras as keras
+from tensorflow.keras.datasets import cifar10
 
 import numpy as np
 import os
 
 import json
 from json import dumps
+from json import loads
 
 import time
 from time import sleep
@@ -62,7 +65,9 @@ def main(ip_address, port):
     
     start = time.time()
     
-    for i in range(10):
+    
+    num_sended = 100
+    for i in range(num_sended):
 
         if i % 100 == 0:
             print(i, 'th data sending')
@@ -74,6 +79,36 @@ def main(ip_address, port):
     print("elapsed :", time.time() - start)
 
     producer.close()
+
+    
+    
+    #consumer setting
+    consumer = KafkaConsumer('reply', bootstrap_servers=[broker_address], auto_offset_reset='earliest', enable_auto_commit=True, group_id='my-group', value_deserializer=lambda x: loads(x.decode('utf-8')), consumer_timeout_ms=1000 )
+    print('[begin] get consumer list')
+    
+    before_time = time.time()
+    responsed = 0
+    try:
+        while(True):
+            current_time = time.time()
+            if current_time - before_time > 10:
+                print("About 10 secs passed")
+                before_time = current_time
+
+            for message in consumer:
+                print(message.value['reply'])
+                num_partition, num_replied = message.value['reply']
+                
+                responsed += num_replied
+                print('num_partition,num_replied, responsed : ', num_partition, num_replied, responsed)
+                
+                if responsed >= num_sended:
+                    print('finished')
+                    break
+
+    finally:
+        consumer.close()
+        
 
     
 if __name__ == "__main__":

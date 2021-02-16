@@ -1,10 +1,12 @@
 #customer
 
+from kafka import KafkaProducer
 from kafka import KafkaConsumer
 from kafka.structs import TopicPartition
 
 import json
 from json import loads
+from json import dumps
 
 import time
 from time import sleep
@@ -12,23 +14,33 @@ from time import sleep
 import tensorflow as tf
 import tensorflow.keras as keras
 
-def main(ip_address, port, partition_number, model_path):
+import numpy as np
+
+def main(ip_address, port, partition_number, model_path, micro_batch_size):
+    #broker configure
     topic = 'cifar10'
     broker_address = ip_address + ":" + port
 
+    #consumer setting
     consumer = KafkaConsumer( bootstrap_servers=[broker_address], auto_offset_reset='earliest', enable_auto_commit=True, group_id='my-group', value_deserializer=lambda x: loads(x.decode('utf-8')), consumer_timeout_ms=1000 )
     print('[begin] get consumer list')
 
-    consumer.assign([TopicPartition(topic,1)])
+    consumer.assign([TopicPartition(topic,partition_number)])
     
     print("model loading...")
     model = tf.keras.models.load_model(model_path)
     print("model loaded!")
     
+    
+    ##for reply producer
+    producer = KafkaProducer(acks=0, compression_type='gzip', bootstrap_servers=[broker_address], value_serializer=lambda x: dumps(x).encode('utf-8'))
+    
+    
+    
     before_time = time.time()
 
     current_batch = []
-    micro_batch_size = 10
+    
     try:
         while(True):
             current_time = time.time()
@@ -39,7 +51,6 @@ def main(ip_address, port, partition_number, model_path):
             for message in consumer:
                 if len(current_batch) == micro_batch_size:
                     break
-                message.value['img']
                 received_x = np.array(json.loads(message.value['img']))
                 current_batch.append(received_x)
                 
@@ -49,13 +60,22 @@ def main(ip_address, port, partition_number, model_path):
                 model.predict(current_batch)
                 predict_end = time.time()
                 print("Predict time : ", predict_end - predict_start)
-                current_batch = []
+
                 
-            #break
+                #reply
+                #(partition_number,  #힘들어서 일단 batch만
+                data = {'reply' : (partition_number, len(current_batch))}
+
+                #producer.send('reply', value=data)
+                #producer.flush()
+
+                current_batch = []
+
 
     finally:
         consumer.close()
-
+        producer.close()
+        
     print('[end] get consumer list')
 
 
@@ -76,8 +96,12 @@ if __name__ == "__main__":
     with open("model_path.txt", "r") as f:
         model_path = f.readline()
         
-    print(ip_address, port, partition_number, model_path)
+    micro_batch_size = 1
+    with open("micro_batch_size.txt", "r") as f:
+        micro_batch_size = int(f.readline())
+        
+    print(ip_address, port, partition_number, model_path, micro_batch_size)
     
-    main(ip_address,port,partition_number, model_path)
+    main(ip_address,port,partition_number, model_path, micro_batch_size)
 
     
