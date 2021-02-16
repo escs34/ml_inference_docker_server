@@ -63,7 +63,7 @@ def main(ip_address, port):
 
     x_train, y_train, x_test, y_test = get_data()
     
-    start = time.time()
+    start_time = time.time()
     
     
     num_sended = 100
@@ -76,7 +76,7 @@ def main(ip_address, port):
         #important
         producer.send(topic, value=data, partition=randint(0,2))
         producer.flush()
-    print("elapsed :", time.time() - start)
+    print("elapsed :", time.time() - start_time)
 
     producer.close()
 
@@ -102,14 +102,15 @@ def main(ip_address, port):
                 responsed += num_replied
                 print('num_partition,num_replied, responsed : ', num_partition, num_replied, responsed)
                 
-                if responsed >= num_sended:
-                    print('finished')
-                    break
+            if responsed >= num_sended:
+                print('finished')
+                break
 
     finally:
         consumer.close()
         
-
+    end_time = time.time()
+    print("Total Process time is : ", end_time - start_time)
     
 if __name__ == "__main__":
     ip_address = ""

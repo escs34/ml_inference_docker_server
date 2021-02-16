@@ -39,7 +39,7 @@ def main(ip_address, port, partition_number, model_path, micro_batch_size):
     
     before_time = time.time()
 
-    current_batch = []
+    current_batch = np.array([])
     
     try:
         while(True):
@@ -49,13 +49,20 @@ def main(ip_address, port, partition_number, model_path, micro_batch_size):
                 before_time = current_time
 
             for message in consumer:
+                received_x = np.array(json.loads(message.value['img']))
+                #print("received_x.shape ", received_x.shape)
+                if len(current_batch) == 0 :
+                    current_batch = received_x
+                else:
+                    current_batch = np.concatenate((current_batch, received_x))
+                #print("current_batch shape ", current_batch.shape)
+                #print("current_batch len ", len(current_batch))
+                
                 if len(current_batch) == micro_batch_size:
                     break
-                received_x = np.array(json.loads(message.value['img']))
-                current_batch.append(received_x)
-                
+                    
             if len(current_batch) > 0 :
-                print("Current batch size : ",len(current_batch))
+                print("Current batch shape For Predict : ", current_batch.shape)
                 predict_start = time.time()
                 model.predict(current_batch)
                 predict_end = time.time()
@@ -63,13 +70,12 @@ def main(ip_address, port, partition_number, model_path, micro_batch_size):
 
                 
                 #reply
-                #(partition_number,  #힘들어서 일단 batch만
                 data = {'reply' : (partition_number, len(current_batch))}
 
-                #producer.send('reply', value=data)
-                #producer.flush()
+                producer.send('reply', value=data)
+                producer.flush()
 
-                current_batch = []
+                current_batch = np.array([])
 
 
     finally:
